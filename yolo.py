@@ -7,6 +7,7 @@ Usage:
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -14,8 +15,6 @@ import cv2
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
-
-import cut
 
 FILE = Path(__file__).resolve()
 sys.path.append(FILE.parents[0].as_posix())  # add yolov5/ to path
@@ -31,9 +30,28 @@ from utils.plots import Annotator, colors
 from utils.torch_utils import load_classifier, select_device, time_sync
 
 
+def calculate(pt):
+    x=pt[2].item()-pt[0].item()
+    y=pt[3].item()-pt[1].item()
+    square=x*y
+    return int(square)
+def cut_pic(xyxy_l,img,num):
+    max=[]
+    for xyxy in xyxy_l:
+        sq=calculate(xyxy)
+        if len(max)==0:
+            max=xyxy
+        elif sq>calculate(max):
+            max=xyxy
+    final=[int(i.item()) for i in max]
+    
+    os.makedirs('final',exist_ok=True)
+    img=cv2.resize(img[final[1]:final[3],final[0]:final[2]],(96,96))
+    cv2.imwrite(os.path.join('final', '%04d.jpg' % num),img)
+
 @torch.no_grad()
 def run(weights='yolov5s.pt',  # model.pt path(s)
-        source='data/images',  # file/dir/URL/glob, 0 for webcam
+        source='data',  # file/dir/URL/glob, 0 for webcam
         imgsz=[640,640],  # inference size (pixels)
         conf_thres=0.25,  # confidence threshold
         iou_thres=0.45,  # NMS IOU threshold
@@ -63,7 +81,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
 
     # Directories
     save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
-    (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
+    # (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
 
     # Initialize
     set_logging()
@@ -223,18 +241,9 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
             if save_img:
                 if dataset.mode == 'image':
                     if len(xyxy_l)!=0:
-                        cut.cutpic(xyxy_l,img_s,num)
+                        cut_pic(xyxy_l,img_s,num)
                         num+=1
             
-
-    # Print results
-    t = tuple(x / seen * 1E3 for x in dt)  # speeds per image
-    print(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {(1, 3, *imgsz)}' % t)
-    if save_txt or save_img:
-        s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
-        print(f"Results saved to {colorstr('bold', save_dir)}{s}")
-    if update:
-        strip_optimizer(weights)  # update model (to fix SourceChangeWarning)
 
 
 def parse_opt():
@@ -273,7 +282,3 @@ def main(opt):
     check_requirements(exclude=('tensorboard', 'thop'))
     run(**vars(opt))
 
-
-if __name__ == "__main__":
-    opt = parse_opt()
-    main(opt)

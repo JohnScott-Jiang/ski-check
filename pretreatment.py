@@ -1,5 +1,10 @@
 import os
+import sys
+
 import cv2
+
+import yolo
+
 
 # 把目录下的所有视频保存为图像
 def save_video_to_image(video_dir):
@@ -19,5 +24,8 @@ def save_video_to_image(video_dir):
                 break
             cv2.imwrite(os.path.join(output_dir, '%s_%04d.jpg' %(name, i)), frame)
 
-if __name__ == '__main__':
-    save_video_to_image(r'D:\data\skiing')  # 这个目录设置为你的视频所在的目录
+if __name__ == '__main__' :
+    source_datapath=sys.argv[1]
+    save_video_to_image(source_datapath)
+    datapath=os.path.join(source_datapath,'output')
+    yolo.run(source=datapath)
