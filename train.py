@@ -1,25 +1,16 @@
-import torch
+import argparse
 import math
+import os
+from matplotlib import pyplot as plt
+import numpy as np
+
+import torch
 import torch.nn as nn
 from torch.autograd import Variable
-from torchvision import transforms, models
-import argparse
-import os
 from torch.utils.data import DataLoader
+from torchvision import models, transforms
 
 from dataloader import mnist_loader as ml
-
-
-parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
-parser.add_argument('--datapath', required=True, help='data path')
-parser.add_argument('--batch_size', type=int, default=64, help='training batch size')
-parser.add_argument('--epochs', type=int, default=50, help='number of epochs to train')
-parser.add_argument('--use_cuda', default=True, help='using CUDA for training')
-
-args = parser.parse_args()
-args.cuda = args.use_cuda and torch.cuda.is_available()
-if args.cuda:
-    torch.backends.cudnn.benchmark = True
 
 
 def train():
@@ -35,14 +26,14 @@ def train():
     train_loader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True)
     val_loader = DataLoader(dataset=val_data, batch_size=args.batch_size)
 
-    model = models.resnet101(num_classes=3)
+    model = models.resnet152(num_classes=3)
     # model.load_state_dict(torch.load('output/params_50.pth'))
 
     if args.cuda:
         print('training with cuda')
-        model=model.cuda()
+        model.cuda()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-3)
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, [20, 40], 0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, [30, 60], 0.1)
     loss_func = nn.CrossEntropyLoss()
 
     for epoch in range(args.epochs):
@@ -71,7 +62,8 @@ def train():
         scheduler.step()  # 更新learning rate
         print('Train Loss: %.6f, Acc: %.3f' % (train_loss / (math.ceil(len(train_data)/args.batch_size)),
                                                train_acc / (len(train_data))))
-
+        losslist.append(train_loss / (math.ceil(len(train_data)/args.batch_size)))
+        acclist.append(train_acc / (len(train_data)))
         # evaluation--------------------------------
         model.eval()
         eval_loss = 0
@@ -97,4 +89,30 @@ def train():
             #to_onnx(model, 3, 28, 28, 'params.onnx')
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
+    parser.add_argument('--datapath', required=True, help='data path')
+    parser.add_argument('--batch_size', type=int, default=64, help='training batch size')
+    parser.add_argument('--epochs', type=int, default=60, help='number of epochs to train')
+    parser.add_argument('--use_cuda', default=True, help='using CUDA for training')
+
+    args = parser.parse_args()
+    args.cuda = args.use_cuda and torch.cuda.is_available()
+    if args.cuda:
+        torch.backends.cudnn.benchmark = True
+
+    losslist=[]
+    acclist=[]
+
     train()
+
+    cost = np.array(losslist)
+    acc = np.array(acclist)
+
+    plt.ylabel('Accuracy rate / cost')
+    plt.xlabel('iterations (per Epoch)')
+    plt.title("Learning rate = 0.01")
+
+    plt.plot(cost,label='Cost')
+    plt.plot(acc,label='Accuracy rate')
+    plt.legend()
+    plt.show()

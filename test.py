@@ -10,6 +10,7 @@ from torchvision import transforms, models
 import cv2
 
 model = models.resnet152(num_classes=3)
+print(model)
 model.load_state_dict(torch.load("output/params_50.pth"))
 model.eval()
 model.cuda()

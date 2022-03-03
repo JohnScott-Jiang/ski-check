@@ -9,6 +9,8 @@ from torch.utils.data import DataLoader
 import random
 import cv2
 from torch.utils.data import Dataset
+from matplotlib import pyplot as plt
+import numpy as np
 
 
 def image_list(imageRoot, txt='list.txt'):
@@ -115,8 +117,10 @@ def train():
         image_list(args.datapath, 'output/total.txt')
         shuffle_split('output/total.txt', 'output/train.txt', 'output/val.txt')
 
-    train_data = MyDataset(txt='output/train.txt', transform=transforms.ToTensor())
-    val_data = MyDataset(txt='output/val.txt', transform=transforms.ToTensor())
+    # train_data = MyDataset(txt='output/train.txt', transform=transforms.ToTensor())
+    train_data = MyDataset(txt='output/train.txt', transform=transforms.Compose([transforms.ToTensor(),transforms.RandomHorizontalFlip()]))
+    # val_data = MyDataset(txt='output/val.txt', transform=transforms.ToTensor())
+    val_data = MyDataset(txt='output/val.txt', transform=transforms.Compose([transforms.ToTensor(),transforms.RandomHorizontalFlip()]))
     train_loader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True)
     val_loader = DataLoader(dataset=val_data, batch_size=args.batch_size)
 
@@ -159,7 +163,8 @@ def train():
         scheduler.step()  # 更新learning rate
         print('Train Loss: %.6f, Acc: %.3f' % (train_loss / (math.ceil(len(train_data)/args.batch_size)),
                                                train_acc / (len(train_data))))
-
+        losslist.append(train_loss / (math.ceil(len(train_data)/args.batch_size)))
+        acclist.append(train_acc / (len(train_data)))
         # evaluation--------------------------------
         model.eval()
         eval_loss = 0
@@ -188,7 +193,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
     parser.add_argument('--datapath', required=True, help='data path')
     parser.add_argument('--batch_size', type=int, default=128, help='training batch size')
-    parser.add_argument('--epochs', type=int, default=300, help='number of epochs to train')
+    parser.add_argument('--epochs', type=int, default=60, help='number of epochs to train')
     parser.add_argument('--use_cuda', default=True, help='using CUDA for training')
 
     args = parser.parse_args()
@@ -196,4 +201,19 @@ if __name__ == '__main__':
     if args.cuda:
         torch.backends.cudnn.benchmark = True
 
+    losslist=[]
+    acclist=[]
+
     train()
+
+    cost = np.array(losslist)
+    acc = np.array(acclist)
+
+    plt.ylabel('Accuracy rate / cost')
+    plt.xlabel('iterations (per Epoch)')
+    plt.title("Learning rate = 0.01")
+
+    plt.plot(cost,label='Cost')
+    plt.plot(acc,label='Accuracy rate')
+    plt.legend()
+    plt.show()
