@@ -5,7 +5,7 @@
 新功能已经完成，运行以下代码就可以训练数据集。
 
 ```
-python3 train.py --datapath DS
+python3 train_sug.py --datapath DS
 ```
 
 数据集必须已经完成分类，分类方法为将每一类图片放至对应标签的文件夹下，如图
