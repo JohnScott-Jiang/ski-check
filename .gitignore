@@ -3,3 +3,6 @@
 /data
 /final
 /runs
+/DS
+/output
+__pycache__
